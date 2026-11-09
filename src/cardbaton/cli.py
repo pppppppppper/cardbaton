@@ -12,7 +12,7 @@ from .ssh import bootstrap
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="sshgpu", description="Queue GPU jobs on existing SSH machines")
+    parser = argparse.ArgumentParser(prog="cardbaton", description="Queue GPU jobs on existing SSH machines")
     parser.add_argument("--config", default="config.yaml")
     commands = parser.add_subparsers(dest="action", required=True)
     submit = commands.add_parser("submit", help="Submit a job YAML or an argv command")
@@ -107,7 +107,7 @@ def main():
             job = queue.change(args.job_id, args.action, getattr(args, "priority", None))
             print(job["id"], args.action, job["state"])
     except (ValueError, OSError, RemoteError, yaml.YAMLError, subprocess.SubprocessError) as exc:
-        print(f"sshgpu: {exc}", file=sys.stderr)
+        print(f"cardbaton: {exc}", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
         return 130
