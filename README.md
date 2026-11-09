@@ -2,6 +2,8 @@
 
 Queue experiment commands on NVIDIA GPU machines you already reach over SSH. Keep one queue on your laptop or a management host, pin a job to physical GPU indices or let the queue choose idle GPUs, and pause cooperating training jobs at a checkpoint.
 
+The quick start below is for operators. [AGENTS.md](AGENTS.md) covers the CLI workflow, queue states and checkpoint contract for AI assistants and contributors.
+
 ## Quick start
 
 The controller needs Python 3.9+, OpenSSH and a Unix filesystem. Workers need Linux, Python 3.9+ and `nvidia-smi` on their SSH command path. The controller sends a small standard-library worker over SSH at launch. Put your code, datasets and training environment on the target machine before submitting a job.
