@@ -1,0 +1,10 @@
+state_dir: .sshgpu
+poll_seconds: 5
+nodes:
+  lab-a:
+    ssh: research-a
+    gpus: [1, 2, 3]
+    # public_key: ~/.ssh/id_ed25519.pub
+  lab-b:
+    ssh: researcher@gpu-b.example.org
+    gpus: [0, 1]

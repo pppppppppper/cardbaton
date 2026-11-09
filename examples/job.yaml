@@ -1,0 +1,9 @@
+name: checkpoint-demo
+node: lab-a
+gpus: [1]
+priority: 10
+timeout_seconds: 3600
+checkpoint_grace_seconds: 60
+cwd: ~/experiments
+command: [python3, checkpoint_job.py, --steps, "600"]
+resume_command: [python3, checkpoint_job.py, --steps, "600"]

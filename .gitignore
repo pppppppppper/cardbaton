@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+.sshgpu/
+config.yaml
+*.local.yaml
+*.log
+*.pem
+*.key
+.env
