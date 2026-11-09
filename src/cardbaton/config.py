@@ -27,9 +27,10 @@ def string(value, field):
     return value
 
 
-def indices(value, field):
-    if not isinstance(value, list) or not value:
-        raise ValueError(f"{field} must be a nonempty list of GPU indices")
+def indices(value, field, *, allow_empty=False):
+    if not isinstance(value, list) or (not value and not allow_empty):
+        qualifier = "" if allow_empty else "nonempty "
+        raise ValueError(f"{field} must be a {qualifier}list of GPU indices")
     result = [integer(index, field, 0) for index in value]
     if len(set(result)) != len(result):
         raise ValueError(f"{field} contains a duplicate GPU index")
@@ -63,7 +64,7 @@ def load_config(path):
         normalized[name] = dict(
             name=name, ssh=target, python=interpreter,
             root=string(node.get("remote_state_dir", "~/.local/state/sshgpu-queue"), "remote_state_dir"),
-            gpus=indices(node["gpus"], "node.gpus") if "gpus" in node else None,
+            gpus=indices(node["gpus"], "node.gpus", allow_empty=True) if "gpus" in node else None,
             idle_mib=integer(node.get("idle_mib", 64), "idle_mib", 0),
         )
         if "public_key" in node:

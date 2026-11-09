@@ -37,6 +37,8 @@ The config maps node names to an OpenSSH alias or `user@host`. Put connection se
 
 Edit the same config file used by `cardbaton run`. The controller reloads it before each scheduling pass. You can add or remove nodes, change their `gpus`, `idle_mib`, SSH target or Python interpreter, and change `poll_seconds`. For example, `gpus: [1, 2, 4, 6, 7]` selects a non-contiguous pool; range strings such as `"1-2,4,6-7"` are not accepted.
 
+Set a node's `gpus: []` to stop new placements there while keeping existing tasks monitored. Restore its indices to enable placements again. Job-level `gpus` must still be nonempty.
+
 Changes affect new placements. Existing starting/running attempts retain their recorded node and GPU allocation and continue to be monitored, even when that node or card is removed from the pool. A queued job pinned to a removed node or excluded GPU remains queued with an explanatory error. A resumed job uses the current GPU pool on its original node; changing/removing that node's SSH target blocks resume rather than moving its checkpoint to another host. New SSH nodes must be reachable; use `bootstrap` separately if first-use key setup is needed.
 
 A malformed or temporarily missing config keeps the last valid settings and reports an error without stopping the controller. Correcting the file applies it on a later pass. `state_dir` cannot be moved by hot reload, and an existing node's `remote_state_dir` cannot change while it has active attempts: those paths hold the queue and live GPU leases. Stop/migrate the relevant state separately when relocating it.

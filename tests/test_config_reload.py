@@ -90,6 +90,20 @@ class ConfigReloadTests(unittest.TestCase):
         self.assertEqual(self.queue.nodes, original)
         self.assertEqual(self.interval, 5)
 
+    def test_empty_node_pool_stops_new_placement(self):
+        self.queue.submit({"command": ["python3", "train.py"], "node": "a",
+                           "gpu_count": 1, "priority": 0})
+        self.raw["nodes"]["a"]["gpus"] = []
+        self.save()
+        self.reload()
+        self.assertEqual(self.queue.nodes["a"]["gpus"], [])
+        with patch("cardbaton.queue.remote", return_value=[{"index": 0, "available": True}]) as rpc:
+            self.queue.tick()
+            self.assertEqual([call.args[1] for call in rpc.call_args_list], ["probe"])
+        with self.queue.edit() as jobs:
+            self.assertEqual(jobs[0]["state"], "queued")
+            self.assertEqual(jobs[0]["attempts"], [])
+
     def test_lease_root_waits_for_active_attempts(self):
         self.active_job()
         root = self.queue.nodes["a"]["root"]
