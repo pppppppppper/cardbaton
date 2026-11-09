@@ -18,6 +18,8 @@ Use the user's existing config and the same `--config` path for every command. [
 
 `submit` prints a job ID and queues the job. A running `cardbaton run` controller dispatches it when eligible GPUs are available. `run --once` dispatches eligible jobs for one pass. It can pick up other jobs already in the same queue. A worker keeps running when the controller exits.
 
+The controller reloads its config before each pass. Edit that same file to change eligible nodes/cards or the polling interval. Pool changes affect new placements, not running attempts. Invalid edits retain the last valid config. Do not relocate `state_dir`, or an active node's `remote_state_dir`, through hot reload; those contain persistent queue/lease state.
+
 Use `status --json` to distinguish queue state from remote attempt state. `queued` is waiting for placement. `starting` means a placement attempt has been recorded. `pausing` means the worker has requested a checkpoint. `paused` confirms the job exited with a checkpoint marker. `lost` means the worker exited without reporting a final status. Report a placement or checkpoint as confirmed only after the corresponding state appears.
 
 The CLI can submit commands directly with `--node`, `--gpus` or `--gpu-count`, `--priority`, `--timeout` (seconds), and `--cwd`. Use `--` before the remote command. [examples/job.yaml](examples/job.yaml) shows how to declare `resume_command` for a resumable job.

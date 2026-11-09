@@ -75,7 +75,7 @@ def main():
                 spec["command"] = command
             print(queue.submit(validate_job(spec, nodes))["id"])
         elif args.action == "run":
-            queue.run(interval, args.once)
+            queue.run(interval, args.once, config_path=Path(args.config).expanduser().absolute())
         elif args.action == "gpus":
             for name, node in nodes.items():
                 try:

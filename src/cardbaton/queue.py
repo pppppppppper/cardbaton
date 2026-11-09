@@ -1,5 +1,6 @@
 import json
 import subprocess
+import sys
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -112,7 +113,13 @@ class Queue:
 
     def choices(self, job):
         if "resume_node" in job:
-            return [job["resume_node"]]
+            original = job["resume_node"]
+            current = self.nodes.get(original["name"])
+            # Keep checkpoint locality, while respecting the node's current
+            # GPU pool and connection settings rather than stale placement.
+            if current is None or current["ssh"] != original["ssh"]:
+                return []
+            return [current]
         node = job["spec"].get("node")
         if node is None:
             return list(self.nodes.values())
@@ -132,7 +139,10 @@ class Queue:
                 spec = job["spec"]
                 choices = self.choices(job)
                 if not choices:
-                    job["error"] = "The pinned node is no longer configured."
+                    job["error"] = (
+                        "The checkpoint node is no longer configured with its original SSH target."
+                        if "resume_node" in job else "The pinned node is no longer configured."
+                    )
                 for node in choices:
                     key = json.dumps(node, sort_keys=True)
                     if key not in available:
@@ -145,6 +155,10 @@ class Queue:
                     candidates = available[key]
                     if node["gpus"] is not None:
                         candidates = candidates.intersection(node["gpus"])
+                        if (spec["gpu_count"] > len(node["gpus"]) or
+                                not set(spec.get("gpus", ())).issubset(node["gpus"])):
+                            job["error"] = f"Requested GPUs are outside the current pool on {node['name']}."
+                            continue
                     gpus = spec.get("gpus", sorted(candidates)[:spec["gpu_count"]])
                     if len(gpus) != spec["gpu_count"] or not set(gpus).issubset(candidates):
                         continue
@@ -159,11 +173,48 @@ class Queue:
                     if job["state"] != "queued":
                         break
 
-    def run(self, interval, once=False):
+    def reload_config(self, path, interval):
+        """Apply valid resource changes without relocating existing attempts."""
+        import yaml
+        from .config import load_config
+
+        try:
+            nodes, directory, new_interval = load_config(path)
+            if directory != self.state_dir.resolve():
+                raise ValueError("state_dir cannot change while this controller is running")
+            with self.edit() as jobs:
+                for job in jobs:
+                    if job["state"] not in ACTIVE:
+                        continue
+                    original = job["attempts"][-1]["node"]
+                    current = nodes.get(original["name"])
+                    if (current is not None and current["ssh"] == original["ssh"] and
+                            current["root"] != original["root"]):
+                        raise ValueError(
+                            f"remote_state_dir for {original['name']} cannot change while attempts are active"
+                        )
+        except (OSError, ValueError, yaml.YAMLError) as exc:
+            message = str(exc)
+            if message != getattr(self, "_config_error", None):
+                print(f"cardbaton: keeping last valid config: {message}", file=sys.stderr)
+            self._config_error = message
+            return interval
+        changed = nodes != self.nodes or new_interval != interval
+        recovered = getattr(self, "_config_error", None) is not None
+        self.nodes = nodes
+        self._config_error = None
+        if changed or recovered:
+            print(f"cardbaton: reloaded config; nodes={','.join(nodes)}, poll_seconds={new_interval}",
+                  file=sys.stderr)
+        return new_interval
+
+    def run(self, interval, once=False, config_path=None):
         with lease(self.state_dir / "controller.lock") as fd:
             if fd is None:
                 raise ValueError("A controller is already running for this state directory")
             while True:
+                if config_path is not None:
+                    interval = self.reload_config(config_path, interval)
                 self.tick()
                 if once:
                     return

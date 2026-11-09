@@ -33,6 +33,14 @@ Use `cardbaton --config /path/to/config.yaml` when working outside the config di
 
 The config maps node names to an OpenSSH alias or `user@host`. Put connection settings such as `Port`, `ProxyJump`, and `IdentityFile` in `~/.ssh/config`. The optional node field `gpus` restricts eligible physical indices, and `idle_mib` sets the maximum reported memory in use for an idle GPU (default 64 MiB). A local node can use `local: true` in place of `ssh`. The `remote_state_dir` defaults to `~/.local/state/sshgpu-queue`; use one state directory per remote login across controllers so GPU leases are shared.
 
+### Change the resource pool while the controller runs
+
+Edit the same config file used by `cardbaton run`. The controller reloads it before each scheduling pass. You can add or remove nodes, change their `gpus`, `idle_mib`, SSH target or Python interpreter, and change `poll_seconds`. For example, `gpus: [1, 2, 4, 6, 7]` selects a non-contiguous pool; range strings such as `"1-2,4,6-7"` are not accepted.
+
+Changes affect new placements. Existing starting/running attempts retain their recorded node and GPU allocation and continue to be monitored, even when that node or card is removed from the pool. A queued job pinned to a removed node or excluded GPU remains queued with an explanatory error. A resumed job uses the current GPU pool on its original node; changing/removing that node's SSH target blocks resume rather than moving its checkpoint to another host. New SSH nodes must be reachable; use `bootstrap` separately if first-use key setup is needed.
+
+A malformed or temporarily missing config keeps the last valid settings and reports an error without stopping the controller. Correcting the file applies it on a later pass. `state_dir` cannot be moved by hot reload, and an existing node's `remote_state_dir` cannot change while it has active attempts: those paths hold the queue and live GPU leases. Stop/migrate the relevant state separately when relocating it.
+
 ## Set up a public key on first use
 
 ```sh
