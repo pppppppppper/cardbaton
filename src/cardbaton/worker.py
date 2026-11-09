@@ -146,6 +146,9 @@ def run(directory):
     environment = os.environ | spec.get("env", {})
     environment.pop("SSHGPU_CHECKPOINT", None)
     environment.update(CUDA_VISIBLE_DEVICES=",".join(spec["gpu_uuids"]),
+                       SSHGPU_GPU_INDICES=",".join(str(index) for index in current["gpus"]),
+                       SSHGPU_ATTEMPT_ID=directory.name,
+                       SSHGPU_ATTEMPT_DIR=str(directory.resolve()),
                        SSHGPU_JOB_ID=spec["job_id"], SSHGPU_PAUSE_FILE=str(pause_file),
                        SSHGPU_CHECKPOINT_READY=str(ready_file))
     if spec.get("checkpoint"):
